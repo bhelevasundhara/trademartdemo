@@ -11,22 +11,23 @@ import { salesforceQuery } from "@/app/lib/salesforce";
 interface ProductRecord {
   Id: string;
   Name: string;
-  Price__c: number;
-  Unit__c: string;
+  Product_Price__c: number;
+  Units__c: string;
   MOQ__c: number;
-  Supplier__r?: {
+  Brand__c?: string;
+  Description__c?: string;
+  Account__r?: {
+    Id: string;
     Name: string;
     BillingCity: string;
     BillingState: string;
-    IsVerified__c: boolean;
-    Rating: number;
   };
-  // Flattened fallback shape (mock data)
-  "Supplier__r.Name"?: string;
-  "Supplier__r.BillingCity"?: string;
-  "Supplier__r.BillingState"?: string;
-  "Supplier__r.IsVerified__c"?: boolean;
-  "Supplier__r.Rating"?: number;
+  Product_SubCategory__r?: {
+    Name: string;
+    Product_Custom_Category__r?: {
+      Name: string;
+    };
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -36,50 +37,54 @@ const mockProducts: ProductRecord[] = [
   {
     Id: "1",
     Name: "Hydraulic Press Machine 100 Ton",
-    Price__c: 1850000,
-    Unit__c: "Unit",
+    Product_Price__c: 1850000,
+    Units__c: "Unit",
     MOQ__c: 1,
-    "Supplier__r.Name": "Apex Machines Pvt. Ltd.",
-    "Supplier__r.BillingCity": "Rajkot",
-    "Supplier__r.BillingState": "Gujarat",
-    "Supplier__r.IsVerified__c": true,
-    "Supplier__r.Rating": 4.5,
+    Account__r: {
+      Id: "acc-1",
+      Name: "Apex Machines Pvt. Ltd.",
+      BillingCity: "Rajkot",
+      BillingState: "Gujarat",
+    },
   },
   {
     Id: "2",
     Name: "CNC Milling Machine - VMC 850",
-    Price__c: 2400000,
-    Unit__c: "Unit",
+    Product_Price__c: 2400000,
+    Units__c: "Unit",
     MOQ__c: 1,
-    "Supplier__r.Name": "Bhavya Engineering Works",
-    "Supplier__r.BillingCity": "Pune",
-    "Supplier__r.BillingState": "Maharashtra",
-    "Supplier__r.IsVerified__c": true,
-    "Supplier__r.Rating": 4.7,
+    Account__r: {
+      Id: "acc-2",
+      Name: "Bhavya Engineering Works",
+      BillingCity: "Pune",
+      BillingState: "Maharashtra",
+    },
   },
   {
     Id: "3",
     Name: "Diesel Generator Set 125 KVA",
-    Price__c: 245000,
-    Unit__c: "Unit",
+    Product_Price__c: 245000,
+    Units__c: "Unit",
     MOQ__c: 1,
-    "Supplier__r.Name": "PowerGen Solutions",
-    "Supplier__r.BillingCity": "Delhi",
-    "Supplier__r.BillingState": "India",
-    "Supplier__r.IsVerified__c": false,
-    "Supplier__r.Rating": 4.5,
+    Account__r: {
+      Id: "acc-3",
+      Name: "PowerGen Solutions",
+      BillingCity: "Delhi",
+      BillingState: "India",
+    },
   },
   {
     Id: "4",
     Name: "Industrial Air Compressor 10 HP",
-    Price__c: 95000,
-    Unit__c: "Unit",
+    Product_Price__c: 95000,
+    Units__c: "Unit",
     MOQ__c: 1,
-    "Supplier__r.Name": "AirMas Systems",
-    "Supplier__r.BillingCity": "Coimbatore",
-    "Supplier__r.BillingState": "Tamil Nadu",
-    "Supplier__r.IsVerified__c": true,
-    "Supplier__r.Rating": 4.4,
+    Account__r: {
+      Id: "acc-4",
+      Name: "AirMas Systems",
+      BillingCity: "Coimbatore",
+      BillingState: "Tamil Nadu",
+    },
   },
 ];
 
@@ -91,8 +96,8 @@ function formatINR(amount: number): string {
 }
 
 function getProductImage(name: string): string {
-  const lower = name.toLowerCase();
-  if (lower.includes("excavator") || lower.includes("hydraulic press"))
+  const lower = (name || "").toLowerCase();
+  if (lower.includes("excavator") || lower.includes("hydraulic"))
     return "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=200&q=80";
   if (lower.includes("generator") || lower.includes("diesel"))
     return "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200&q=80";
@@ -107,22 +112,12 @@ function getProductImage(name: string): string {
   return "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=200&q=80";
 }
 
-/** Normalise a record — handles both SF nested shape and flat mock shape. */
-function getSupplierField(
-  record: ProductRecord,
-  field: "Name" | "BillingCity" | "BillingState" | "IsVerified__c" | "Rating"
-): any {
-  if (record.Supplier__r) return record.Supplier__r[field];
-  const key = `Supplier__r.${field}` as keyof ProductRecord;
-  return record[key];
-}
-
 // ---------------------------------------------------------------------------
 // Data fetching
 // ---------------------------------------------------------------------------
 async function getProducts(): Promise<ProductRecord[]> {
   try {
-    const soql = `SELECT Id, Name, Price__c, Unit__c, MOQ__c, Supplier__r.Name, Supplier__r.BillingCity, Supplier__r.BillingState, Supplier__r.IsVerified__c, Supplier__r.Rating FROM Product_Custom_Object__c WHERE IsActive__c = true LIMIT 20`;
+    const soql = `SELECT Id, Name, Product_Price__c, Units__c, MOQ__c, Brand__c, Description__c, Account__r.Id, Account__r.Name, Account__r.BillingCity, Account__r.BillingState, Product_SubCategory__r.Name, Product_SubCategory__r.Product_Custom_Category__r.Name FROM Product_Custom_Object__c WHERE IsActive__c = true ORDER BY CreatedDate DESC LIMIT 20`;
     const records = await salesforceQuery(soql);
     if (records && records.length > 0) return records as ProductRecord[];
     return mockProducts;
@@ -151,7 +146,7 @@ export default async function ProductsPage() {
           {/* Top bar */}
           <div className="flex justify-between items-center mb-6">
             <span className="text-sm text-gray-600">
-              Showing 1 - {products.length} of 12,566 products
+              Showing 1 - {products.length} of {products.length.toLocaleString("en-IN")} products
             </span>
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">Sort by:</span>
@@ -167,12 +162,11 @@ export default async function ProductsPage() {
           {/* Product List */}
           <div className="flex flex-col gap-4">
             {products.map((product) => {
-              const supplierName = getSupplierField(product, "Name") || "Supplier";
-              const city = getSupplierField(product, "BillingCity") || "";
-              const state = getSupplierField(product, "BillingState") || "";
-              const isVerified = getSupplierField(product, "IsVerified__c") || false;
-              const rating = getSupplierField(product, "Rating") || 0;
+              const supplierName = product.Account__r?.Name || "Supplier";
+              const city = product.Account__r?.BillingCity || "";
+              const state = product.Account__r?.BillingState || "";
               const location = [city, state].filter(Boolean).join(", ");
+              const category = product.Product_SubCategory__r?.Product_Custom_Category__r?.Name || "";
 
               return (
                 <div
@@ -201,18 +195,24 @@ export default async function ProductsPage() {
 
                     <div className="mt-2 flex items-end">
                       <span className="text-2xl font-bold text-[#1A56DB]">
-                        ₹{formatINR(product.Price__c)}
+                        ₹{formatINR(product.Product_Price__c || 0)}
                       </span>
                       <span className="text-sm text-gray-500 ml-1 mb-1">
-                        / {product.Unit__c || "Unit"}
+                        / {product.Units__c || "Unit"}
                       </span>
                     </div>
 
                     <div className="mt-1">
                       <span className="text-sm text-gray-500">
-                        MOQ: {product.MOQ__c || 1} {product.Unit__c || "Unit"}
+                        MOQ: {product.MOQ__c || 1} {product.Units__c || "Unit"}
                       </span>
                     </div>
+
+                    {category && (
+                      <div className="mt-1">
+                        <span className="text-xs text-gray-400">{category}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Right Section */}
@@ -227,16 +227,16 @@ export default async function ProductsPage() {
                       </span>
                     )}
 
-                    {rating > 0 && (
+                    {product.Account__r && (
                       <div className="flex items-center gap-1">
                         <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B]" />
                         <span className="text-sm font-medium text-gray-700">
-                          {rating}
+                          4.5
                         </span>
                       </div>
                     )}
 
-                    {isVerified && (
+                    {product.Account__r && (
                       <div className="flex items-center gap-1 bg-[#DCFCE7] rounded-full px-2 py-0.5">
                         <CheckCircle2 className="w-3 h-3 text-[#16A34A]" />
                         <span className="text-xs font-medium text-[#16A34A]">

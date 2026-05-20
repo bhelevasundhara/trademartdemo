@@ -21,19 +21,39 @@ import { salesforceQuery } from "@/app/lib/salesforce";
 interface ProductDetail {
   Id: string;
   Name: string;
-  Price__c: number;
-  Unit__c: string;
+  Product_Price__c: number;
+  Units__c: string;
   MOQ__c: number;
-  Supplier__r?: {
+  Brand__c?: string;
+  Description__c?: string;
+  Product_Code__c?: string;
+  Account__r?: {
     Id: string;
     Name: string;
     BillingCity: string;
     BillingState: string;
     BillingCountry: string;
-    IsVerified__c: boolean;
-    Rating: number;
-    ResponseRate__c: number;
+    Phone: string;
+    Website: string;
+    Description: string;
     NumberOfEmployees: number;
+    Rating: string;
+  };
+  Product_SubCategory__r?: {
+    Name: string;
+    Product_Custom_Category__r?: {
+      Name: string;
+    };
+  };
+}
+
+interface SpecRecord {
+  Id: string;
+  Name: string;
+  Value__c: string;
+  Product_Custom_Attribute__r?: {
+    Name: string;
+    IsRequired__c: boolean;
   };
 }
 
@@ -43,21 +63,38 @@ interface ProductDetail {
 const mockProduct: ProductDetail = {
   Id: "1",
   Name: "Hydraulic Press Machine 100 Ton",
-  Price__c: 1850000,
-  Unit__c: "Unit",
+  Product_Price__c: 1850000,
+  Units__c: "Unit",
   MOQ__c: 1,
-  Supplier__r: {
+  Brand__c: "Apex",
+  Account__r: {
     Id: "supplier-1",
     Name: "Apex Machines Pvt. Ltd.",
     BillingCity: "Rajkot",
     BillingState: "Gujarat",
     BillingCountry: "India",
-    IsVerified__c: true,
-    Rating: 4.5,
-    ResponseRate__c: 90,
+    Phone: "+91 9876543210",
+    Website: "www.apexmachines.com",
+    Description: "Leading manufacturer of hydraulic machinery",
     NumberOfEmployees: 250,
+    Rating: "Hot",
+  },
+  Product_SubCategory__r: {
+    Name: "Hydraulic Machines",
+    Product_Custom_Category__r: {
+      Name: "Industrial Machinery",
+    },
   },
 };
+
+const mockSpecs = [
+  { label: "Capacity", value: "100 Ton" },
+  { label: "Type", value: "Hydraulic" },
+  { label: "Condition", value: "New" },
+  { label: "Automation Grade", value: "Semi-Automatic" },
+  { label: "Power Source", value: "Electric" },
+  { label: "Country of Origin", value: "India" },
+];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -67,8 +104,8 @@ function formatINR(amount: number): string {
 }
 
 function getProductImage(name: string): string {
-  const lower = name.toLowerCase();
-  if (lower.includes("excavator") || lower.includes("hydraulic press"))
+  const lower = (name || "").toLowerCase();
+  if (lower.includes("excavator") || lower.includes("hydraulic"))
     return "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=600&q=80";
   if (lower.includes("generator") || lower.includes("diesel"))
     return "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80";
@@ -89,13 +126,31 @@ function getProductImage(name: string): string {
 async function getProduct(id: string): Promise<ProductDetail> {
   try {
     const safeId = id.replace(/'/g, "\\'");
-    const soql = `SELECT Id, Name, Price__c, Unit__c, MOQ__c, Supplier__r.Id, Supplier__r.Name, Supplier__r.BillingCity, Supplier__r.BillingState, Supplier__r.BillingCountry, Supplier__r.IsVerified__c, Supplier__r.Rating, Supplier__r.ResponseRate__c, Supplier__r.NumberOfEmployees FROM Product_Custom_Object__c WHERE Id = '${safeId}' LIMIT 1`;
+    const soql = `SELECT Id, Name, Product_Price__c, Units__c, MOQ__c, Brand__c, Description__c, Product_Code__c, Account__r.Id, Account__r.Name, Account__r.BillingCity, Account__r.BillingState, Account__r.BillingCountry, Account__r.Phone, Account__r.Website, Account__r.Description, Account__r.NumberOfEmployees, Account__r.Rating, Product_SubCategory__r.Name, Product_SubCategory__r.Product_Custom_Category__r.Name FROM Product_Custom_Object__c WHERE Id = '${safeId}' LIMIT 1`;
     const records = await salesforceQuery(soql);
     if (records && records.length > 0) return records[0] as ProductDetail;
     return mockProduct;
   } catch (err) {
     console.error("[ProductDetailPage] Salesforce fetch failed, using mock:", err);
     return mockProduct;
+  }
+}
+
+async function getSpecifications(productId: string): Promise<{ label: string; value: string }[]> {
+  try {
+    const safeId = productId.replace(/'/g, "\\'");
+    const soql = `SELECT Id, Name, Value__c, Product_Custom_Attribute__r.Name, Product_Custom_Attribute__r.IsRequired__c FROM Product_Attribute_Value__c WHERE Product_Custom_Object__c = '${safeId}' ORDER BY Name ASC`;
+    const records = await salesforceQuery(soql);
+    if (records && records.length > 0) {
+      return records.map((r: SpecRecord) => ({
+        label: r.Product_Custom_Attribute__r?.Name || r.Name || "Spec",
+        value: r.Value__c || "N/A",
+      }));
+    }
+    return mockSpecs;
+  } catch (err) {
+    console.error("[ProductDetailPage] Specs fetch failed, using mock:", err);
+    return mockSpecs;
   }
 }
 
@@ -108,25 +163,18 @@ export default async function ProductDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const product = await getProduct(id);
+  const [product, specifications] = await Promise.all([
+    getProduct(id),
+    getSpecifications(id),
+  ]);
 
-  const supplier = product.Supplier__r || mockProduct.Supplier__r!;
-  const isVerified = supplier.IsVerified__c;
+  const supplier = product.Account__r || mockProduct.Account__r!;
+  const categoryName = product.Product_SubCategory__r?.Product_Custom_Category__r?.Name || "Industrial Machinery";
   const location = [supplier.BillingCity, supplier.BillingState, supplier.BillingCountry]
     .filter(Boolean)
     .join(", ");
 
   const mainImage = getProductImage(product.Name);
-
-  // Key specifications (static for the demo)
-  const specifications = [
-    { label: "Capacity", value: "100 Ton" },
-    { label: "Type", value: "Hydraulic" },
-    { label: "Condition", value: "New" },
-    { label: "Automation Grade", value: "Semi-Automatic" },
-    { label: "Power Source", value: "Electric" },
-    { label: "Country of Origin", value: "India" },
-  ];
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] font-sans">
@@ -140,7 +188,7 @@ export default async function ProductDetailPage({
           </Link>
           <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
           <Link href="/products" className="text-[#1A56DB] hover:underline">
-            Industrial Machinery
+            {categoryName}
           </Link>
           <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
           <span className="text-gray-500">{product.Name}</span>
@@ -162,29 +210,27 @@ export default async function ProductDetailPage({
             </h1>
 
             {/* Verified badge */}
-            {isVerified && (
-              <div className="flex items-center gap-2 mb-3">
-                <BadgeCheck className="w-[18px] h-[18px] text-[#16A34A]" />
-                <span className="text-sm font-medium text-[#16A34A]">
-                  Verified Supplier
-                </span>
-              </div>
-            )}
+            <div className="flex items-center gap-2 mb-3">
+              <BadgeCheck className="w-[18px] h-[18px] text-[#16A34A]" />
+              <span className="text-sm font-medium text-[#16A34A]">
+                Verified Supplier
+              </span>
+            </div>
 
             {/* Price */}
             <div className="mb-2 flex items-end">
               <span className="text-4xl font-bold text-[#1A56DB]">
-                ₹{formatINR(product.Price__c)}
+                ₹{formatINR(product.Product_Price__c || 0)}
               </span>
               <span className="text-lg text-gray-500 ml-2">
-                / {product.Unit__c || "Unit"}
+                / {product.Units__c || "Unit"}
               </span>
             </div>
 
             {/* MOQ */}
             <div className="mb-4">
               <span className="text-sm text-gray-500">
-                MOQ: {product.MOQ__c || 1} {product.Unit__c || "Unit"}
+                MOQ: {product.MOQ__c || 1} {product.Units__c || "Unit"}
               </span>
             </div>
 
@@ -277,7 +323,7 @@ export default async function ProductDetailPage({
                   <div className="flex items-center gap-1 mt-1">
                     <Star className="w-3 h-3 fill-[#F59E0B] text-[#F59E0B]" />
                     <span className="text-xs font-medium text-gray-700">
-                      {supplier.Rating}
+                      {supplier.Rating || "4.5"}
                     </span>
                     <span className="text-xs text-gray-400">(168 Reviews)</span>
                   </div>
@@ -310,10 +356,7 @@ export default async function ProductDetailPage({
             {/* Card 2 — Supplier Stats */}
             <div className="bg-white border border-[#E5E7EB] rounded-xl p-5">
               {[
-                {
-                  label: "Response Rate",
-                  value: `${supplier.ResponseRate__c || 90}%`,
-                },
+                { label: "Response Rate", value: "90%" },
                 { label: "On-time Delivery", value: "98%" },
                 {
                   label: "Products",
@@ -334,14 +377,12 @@ export default async function ProductDetailPage({
               ))}
 
               {/* Verified badge */}
-              {isVerified && (
-                <div className="mt-4 flex items-center gap-2">
-                  <CheckCircle2 className="w-[18px] h-[18px] text-[#16A34A]" />
-                  <span className="text-sm font-semibold text-[#16A34A]">
-                    Verified Supplier
-                  </span>
-                </div>
-              )}
+              <div className="mt-4 flex items-center gap-2">
+                <CheckCircle2 className="w-[18px] h-[18px] text-[#16A34A]" />
+                <span className="text-sm font-semibold text-[#16A34A]">
+                  Verified Supplier
+                </span>
+              </div>
             </div>
           </div>
         </div>
