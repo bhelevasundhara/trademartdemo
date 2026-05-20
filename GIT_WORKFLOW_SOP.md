@@ -97,7 +97,8 @@ Go to GitHub **Settings** → **Branches** (or **Rules**) → **Add rule**.
 
 Download the project and start the development server.
 
-### 1. Clone the repository
+### 1. Clone the repository (DO NOT FORK)
+Since you have been invited as an official Collaborator, you have direct access. Do **NOT** click "Fork" on GitHub. Simply clone the main repository directly from **`https://github.com/bhelevasundhara/trademartdemo.git`**:
 ```powershell
 git clone https://github.com/bhelevasundhara/trademartdemo.git
 cd trademartdemo
