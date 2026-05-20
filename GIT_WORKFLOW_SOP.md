@@ -29,7 +29,11 @@ git config --global user.email "you@gmail.com"
 ---
 
 ## Phase 2: Project Initialization
-* **Assignee:** Team Lead | **Frequency:** Once per project lifetime
+* **Assignee:** Vasundhara | **Frequency:** Once per project lifetime
+
+> [!IMPORTANT]
+> ### ✅ **PHASE 2 COMPLETED BY VASUNDHARA**
+> **This phase has already been completed!** New teammates joining the project should **SKIP** these steps and proceed directly to **[Phase 3: Teammate Onboarding](#phase-3-teammate-onboarding)** below.
 
 > [!CAUTION]
 > ### 🚨 **CRITICAL WARNING: WHERE TO RUN COMMANDS**
@@ -93,7 +97,8 @@ Go to GitHub **Settings** → **Branches** (or **Rules**) → **Add rule**.
 
 Download the project and start the development server.
 
-### 1. Clone the repository
+### 1. Clone the repository (DO NOT FORK)
+Since you have been invited as an official Collaborator, you have direct access. Do **NOT** click "Fork" on GitHub. Simply clone the main repository directly from **`https://github.com/bhelevasundhara/trademartdemo.git`**:
 ```powershell
 git clone https://github.com/bhelevasundhara/trademartdemo.git
 cd trademartdemo
