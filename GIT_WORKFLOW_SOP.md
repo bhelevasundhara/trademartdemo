@@ -29,7 +29,7 @@ git config --global user.email "you@gmail.com"
 ---
 
 ## Phase 2: Project Initialization
-* **Assignee:** Vasundhara (Team Lead) | **Frequency:** Once per project lifetime
+* **Assignee:** Vasundhara | **Frequency:** Once per project lifetime
 
 > [!IMPORTANT]
 > ### ✅ **PHASE 2 COMPLETED BY VASUNDHARA**
