@@ -1,17 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
-import { 
-  Settings2, 
-  Building2, 
-  Zap, 
-  Car, 
-  ShoppingBag, 
-  Package, 
-  MoreHorizontal,
-  type LucideIcon
-} from "lucide-react";
+import { LucideIcon } from "lucide-react";
+import { getProductImage, getCategoryIcon } from "@/app/lib/helpers";
 import Navbar from "@/app/components/Navbar";
 import { salesforceQuery } from "@/app/lib/salesforce";
+
+export const dynamic = 'force-dynamic';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -20,55 +14,7 @@ function formatINR(amount: number): string {
   return new Intl.NumberFormat("en-IN").format(amount);
 }
 
-function getProductImage(name: string): string {
-  const lower = (name || "").toLowerCase();
-  if (lower.includes("excavator") || lower.includes("hydraulic"))
-    return "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=300&q=80";
-  if (lower.includes("generator") || lower.includes("diesel"))
-    return "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&q=80";
-  if (lower.includes("cnc") || lower.includes("lathe") || lower.includes("milling"))
-    return "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=300&q=80";
-  if (lower.includes("pump"))
-    return "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=300&q=80";
-  if (lower.includes("compressor"))
-    return "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=300&q=80";
-  if (lower.includes("solar"))
-    return "https://images.unsplash.com/photo-1509391366360-2e959784a276?w=300&q=80";
-  return "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=300&q=80";
-}
 
-function getCategoryIcon(name: string): LucideIcon {
-  const lower = (name || "").toLowerCase();
-  if (lower.includes("machinery") || lower.includes("industrial")) return Settings2;
-  if (lower.includes("construction") || lower.includes("building")) return Building2;
-  if (lower.includes("electrical") || lower.includes("electronics")) return Zap;
-  if (lower.includes("automobile") || lower.includes("auto")) return Car;
-  if (lower.includes("consumer")) return ShoppingBag;
-  if (lower.includes("packaging") || lower.includes("printing")) return Package;
-  return MoreHorizontal;
-}
-
-// ---------------------------------------------------------------------------
-// Hardcoded fallback data (used when Salesforce is unreachable)
-// ---------------------------------------------------------------------------
-const fallbackCategories = [
-  { name: "Industrial Machinery", icon: Settings2 },
-  { name: "Building & Construction", icon: Building2 },
-  { name: "Electrical & Electronics", icon: Zap },
-  { name: "Automobiles & Parts", icon: Car },
-  { name: "Consumer Goods", icon: ShoppingBag },
-  { name: "Packaging & Printing", icon: Package },
-  { name: "More Categories", icon: MoreHorizontal },
-];
-
-const fallbackProducts = [
-  { Id: "1", name: "Hydraulic Excavator", price: "₹23,00,000 / Unit", img: "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=300&q=80" },
-  { Id: "2", name: "Diesel Generator Set", price: "₹2,45,000 / Unit", img: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&q=80" },
-  { Id: "3", name: "CNC Lathe Machine", price: "₹18,75,000 / Unit", img: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=300&q=80" },
-  { Id: "4", name: "Industrial Pump", price: "₹48,500 / Piece", img: "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=300&q=80" },
-  { Id: "5", name: "Air Compressor", price: "₹96,000 / Unit", img: "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=300&q=80" },
-  { Id: "6", name: "Solar Panel 550W", price: "₹9,500 / Piece", img: "https://images.unsplash.com/photo-1509391366360-2e959784a276?w=300&q=80" },
-];
 
 // ---------------------------------------------------------------------------
 // Data fetching
@@ -84,10 +30,10 @@ async function fetchCategories(): Promise<{ name: string; icon: LucideIcon }[]> 
         icon: getCategoryIcon(r.Name),
       }));
     }
-    return fallbackCategories;
+    return [];
   } catch (err) {
-    console.error("[Home] Category fetch failed, using fallback:", err);
-    return fallbackCategories;
+    console.error("[Home] Category fetch failed:", err);
+    return [];
   }
 }
 
@@ -106,10 +52,10 @@ async function fetchFeaturedProducts(): Promise<
         img: getProductImage(r.Name),
       }));
     }
-    return fallbackProducts;
+    return [];
   } catch (err) {
-    console.error("[Home] Product fetch failed, using fallback:", err);
-    return fallbackProducts;
+    console.error("[Home] Product fetch failed:", err);
+    return [];
   }
 }
 
@@ -201,15 +147,21 @@ export default async function Home() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
-          {categories.map((cat, i) => {
-            const IconComponent = cat.icon;
-            return (
-              <div key={i} className="border border-[#E5E7EB] rounded-xl p-4 flex flex-col items-center gap-3 bg-white hover:shadow-sm transition-shadow cursor-pointer">
-                <IconComponent className="w-8 h-8 stroke-[1.5] text-gray-700" />
-                <span className="text-xs text-gray-700 text-center font-medium leading-tight">{cat.name}</span>
-              </div>
-            );
-          })}
+          {categories.length === 0 ? (
+            <div className="col-span-full text-center py-12 text-gray-500">
+              <p className="text-sm">No categories available at the moment.</p>
+            </div>
+          ) : (
+            categories.map((cat, i) => {
+              const IconComponent = cat.icon;
+              return (
+                <div key={i} className="border border-[#E5E7EB] rounded-xl p-4 flex flex-col items-center gap-3 bg-white hover:shadow-sm transition-shadow cursor-pointer">
+                  <IconComponent className="w-8 h-8 stroke-[1.5] text-gray-700" />
+                  <span className="text-xs text-gray-700 text-center font-medium leading-tight">{cat.name}</span>
+                </div>
+              );
+            })
+          )}
         </div>
       </section>
 
@@ -221,21 +173,27 @@ export default async function Home() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {products.map((product, i) => (
-            <Link key={i} href={`/products/${product.Id}`} className="bg-white border border-[#E5E7EB] rounded-xl p-4 flex flex-col hover:shadow-md transition-shadow cursor-pointer">
-              <div className="rounded-lg mb-3 h-36 relative overflow-hidden bg-gray-100">
-                <Image 
-                  src={product.img} 
-                  alt={product.name}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                />
-              </div>
-              <h3 className="text-sm font-semibold text-gray-900 mt-1 line-clamp-2 leading-snug">{product.name}</h3>
-              <p className="text-sm text-gray-700 mt-1">{product.price}</p>
-            </Link>
-          ))}
+          {products.length === 0 ? (
+            <div className="col-span-full text-center py-12 text-gray-500">
+              <p className="text-sm">No products available at the moment.</p>
+            </div>
+          ) : (
+            products.map((product, i) => (
+              <Link key={i} href={`/products/${product.Id}`} className="bg-white border border-[#E5E7EB] rounded-xl p-4 flex flex-col hover:shadow-md transition-shadow cursor-pointer">
+                <div className="rounded-lg mb-3 h-36 relative overflow-hidden bg-gray-100">
+                  <Image 
+                    src={product.img} 
+                    alt={product.name}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  />
+                </div>
+                <h3 className="text-sm font-semibold text-gray-900 mt-1 line-clamp-2 leading-snug">{product.name}</h3>
+                <p className="text-sm text-gray-700 mt-1">{product.price}</p>
+              </Link>
+            ))
+          )}
         </div>
       </section>
 

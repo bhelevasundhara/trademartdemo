@@ -1,0 +1,267 @@
+67.0 APEX_CODE,FINEST;APEX_PROFILING,INFO;CALLOUT,INFO;DATA_ACCESS,INFO;DB,INFO;NBA,INFO;SYSTEM,DEBUG;VALIDATION,INFO;VISUALFORCE,INFO;WAVE,INFO;WORKFLOW,INFO
+Execute Anonymous: // Step 1: Get the Opportunity Split record's data
+Execute Anonymous: gCRM_Opportunity_Split__c split = [
+Execute Anonymous:     SELECT Id, gCRM_Country__c, gCRM_SWIFT_Level_5_Code__c, gCRM_SWIFT_Level_6_Code__c,
+Execute Anonymous:            gCRM_Local_Client_Service_Level_5__c, gCRM_Local_Client_Service_Level_5_Code__c,
+Execute Anonymous:            gCRM_Local_Client_Service_Level_6__c, gCRM_Local_Client_Service_Level_6_Code__c
+Execute Anonymous:     FROM gCRM_Opportunity_Split__c 
+Execute Anonymous:     WHERE Id = 'a02af000007as5tAAA'
+Execute Anonymous: ];
+Execute Anonymous: System.debug('========== STEP 1: OPPORTUNITY SPLIT CURRENT STATE ==========');
+Execute Anonymous: System.debug('Country: ' + split.gCRM_Country__c);
+Execute Anonymous: System.debug('SWIFT Level 5 Code: ' + split.gCRM_SWIFT_Level_5_Code__c);
+Execute Anonymous: System.debug('SWIFT Level 6 Code: ' + split.gCRM_SWIFT_Level_6_Code__c);
+Execute Anonymous: System.debug('LCSL 5 Label: ' + split.gCRM_Local_Client_Service_Level_5__c);
+Execute Anonymous: System.debug('LCSL 5 Code: ' + split.gCRM_Local_Client_Service_Level_5_Code__c);
+Execute Anonymous: System.debug('LCSL 6 Label: ' + split.gCRM_Local_Client_Service_Level_6__c);
+Execute Anonymous: System.debug('LCSL 6 Code: ' + split.gCRM_Local_Client_Service_Level_6_Code__c);
+Execute Anonymous: 
+Execute Anonymous: // Step 2: Build the same lookup keys the batch builds
+Execute Anonymous: String splitLCSL5Code = split.gCRM_Country__c + '~' + split.gCRM_SWIFT_Level_5_Code__c;
+Execute Anonymous: String splitLCSL6Code = split.gCRM_Country__c + '~' + split.gCRM_SWIFT_Level_6_Code__c;
+Execute Anonymous: System.debug('========== STEP 2: LOOKUP KEYS ==========');
+Execute Anonymous: System.debug('splitLCSL5Code (Country~SWIFT5): ' + splitLCSL5Code);
+Execute Anonymous: System.debug('splitLCSL6Code (Country~SWIFT6): ' + splitLCSL6Code);
+Execute Anonymous: 
+Execute Anonymous: // Step 3: Query Level 6 Framework records for this SWIFT code
+Execute Anonymous: System.debug('========== STEP 3: LEVEL 6 FRAMEWORK RECORD ==========');
+Execute Anonymous: List<gCRM_Client_Service_Level_Framework__c> lcsl6List = [
+Execute Anonymous:     SELECT gCRM_Level__c, gCRM_Geography__c, gCRM_Swift_Code__c, gCRM_CSL_Label__c, 
+Execute Anonymous:            gCRM_isActive__c, gCRM_Taxonomy_UID__c, gCRM_Successor_Taxonomy_UI__c,
+Execute Anonymous:            gCRM_LCSL_Unique_Identifier__c,
+Execute Anonymous:            gCRM_Direct_Parent__r.gCRM_CSL_Label__c,
+Execute Anonymous:            gCRM_Direct_Parent__r.gCRM_Swift_Code__c,
+Execute Anonymous:            gCRM_Direct_Parent__r.gCRM_Taxonomy_UID__c,
+Execute Anonymous:            gCRM_Direct_Parent__r.gCRM_Direct_Parent__r.gCRM_Taxonomy_UID__c
+Execute Anonymous:     FROM gCRM_Client_Service_Level_Framework__c 
+Execute Anonymous:     WHERE gCRM_Swift_Code__c = :split.gCRM_SWIFT_Level_6_Code__c
+Execute Anonymous:     AND gCRM_Level__c = 6
+Execute Anonymous: ];
+Execute Anonymous: 
+Execute Anonymous: if(lcsl6List.isEmpty()){
+Execute Anonymous:     System.debug('NO Level 6 Framework record found for SWIFT: ' + split.gCRM_SWIFT_Level_6_Code__c);
+Execute Anonymous:     System.debug('>> Batch would NOT have processed Level 6 for this record');
+Execute Anonymous: } else {
+Execute Anonymous:     for(gCRM_Client_Service_Level_Framework__c r6 : lcsl6List){
+Execute Anonymous:         System.debug('Geography: ' + r6.gCRM_Geography__c);
+Execute Anonymous:         System.debug('LCSL Unique Identifier: ' + r6.gCRM_LCSL_Unique_Identifier__c);
+Execute Anonymous:         System.debug('Label: ' + r6.gCRM_CSL_Label__c);
+Execute Anonymous:         System.debug('isActive: ' + r6.gCRM_isActive__c);
+Execute Anonymous:         System.debug('Taxonomy UID: ' + r6.gCRM_Taxonomy_UID__c);
+Execute Anonymous:         System.debug('Successor Taxonomy UID: ' + r6.gCRM_Successor_Taxonomy_UI__c);
+Execute Anonymous:         System.debug('Grandparent Taxonomy UID: ' + r6.gCRM_Direct_Parent__r?.gCRM_Direct_Parent__r?.gCRM_Taxonomy_UID__c);
+Execute Anonymous:         
+Execute Anonymous:         if(r6.gCRM_isActive__c){
+Execute Anonymous:             System.debug('>> ACTIVE: Batch would only update label, NOT null anything');
+Execute Anonymous:         } else {
+Execute Anonymous:             System.debug('>> INACTIVE: Batch enters successor logic');
+Execute Anonymous:             String successorCode = r6.gCRM_Successor_Taxonomy_UI__c;
+Execute Anonymous:             System.debug('>> Looking for successor key: ' + split.gCRM_Country__c + '~' + successorCode);
+Execute Anonymous:             
+Execute Anonymous:             if(successorCode == null){
+Execute Anonymous:                 System.debug('>> Successor Taxonomy UID is NULL - no successor exists');
+Execute Anonymous:                 System.debug('>> RESULT: Batch would NULL out Level 6 fields (no successor found)');
+Execute Anonymous:             } else {
+Execute Anonymous:                 // Check if successor record exists
+Execute Anonymous:                 List<gCRM_Client_Service_Level_Framework__c> successorList = [
+Execute Anonymous:                     SELECT gCRM_Level__c, gCRM_Geography__c, gCRM_CSL_Label__c, gCRM_Swift_Code__c,
+Execute Anonymous:                            gCRM_Taxonomy_UID__c,
+Execute Anonymous:                            gCRM_Direct_Parent__r.gCRM_CSL_Label__c,
+Execute Anonymous:                            gCRM_Direct_Parent__r.gCRM_Swift_Code__c,
+Execute Anonymous:                            gCRM_Direct_Parent__r.gCRM_Taxonomy_UID__c,
+Execute Anonymous:                            gCRM_Direct_Parent__r.gCRM_Direct_Parent__r.gCRM_Taxonomy_UID__c
+Execute Anonymous:                     FROM gCRM_Client_Service_Level_Framework__c 
+Execute Anonymous:                     WHERE gCRM_Taxonomy_UID__c = :successorCode
+Execute Anonymous:                     AND gCRM_Level__c = 6
+Execute Anonymous:                     AND gCRM_Geography__c = :split.gCRM_Country__c
+Execute Anonymous:                 ];
+Execute Anonymous:                 
+Execute Anonymous:                 if(successorList.isEmpty()){
+Execute Anonymous:                     System.debug('>> No successor Framework record found for ' + split.gCRM_Country__c + '~' + successorCode);
+Execute Anonymous:                     System.debug('>> RESULT: Batch would NULL out Level 6 fields (successor not in map)');
+Execute Anonymous:                 } else {
+Execute Anonymous:                     gCRM_Client_Service_Level_Framework__c successor = successorList[0];
+Execute Anonymous:                     System.debug('>> Successor FOUND:');
+Execute Anonymous:                     System.debug('   Successor Label: ' + successor.gCRM_CSL_Label__c);
+Execute Anonymous:                     System.debug('   Successor SWIFT: ' + successor.gCRM_Swift_Code__c);
+Execute Anonymous:                     System.debug('   Successor Grandparent UID: ' + successor.gCRM_Direct_Parent__r?.gCRM_Direct_Parent__r?.gCRM_Taxonomy_UID__c);
+Execute Anonymous:                     System.debug('   Inactive Grandparent UID:  ' + r6.gCRM_Direct_Parent__r?.gCRM_Direct_Parent__r?.gCRM_Taxonomy_UID__c);
+Execute Anonymous:                     
+Execute Anonymous:                     Boolean hasGlobalParentCSLChanged = successor.gCRM_Direct_Parent__r?.gCRM_Direct_Parent__r?.gCRM_Taxonomy_UID__c 
+Execute Anonymous:                         != r6.gCRM_Direct_Parent__r?.gCRM_Direct_Parent__r?.gCRM_Taxonomy_UID__c;
+Execute Anonymous:                     System.debug('   hasGlobalParentCSLChanged: ' + hasGlobalParentCSLChanged);
+Execute Anonymous:                     
+Execute Anonymous:                     if(hasGlobalParentCSLChanged){
+Execute Anonymous:                         System.debug('>> RESULT: Batch NULLed BOTH Level 5 AND Level 6 (global parent CSL changed)');
+Execute Anonymous:                     } else {
+Execute Anonymous:                         System.debug('>> RESULT: Batch REPLACED Level 5 and Level 6 with successor values');
+Execute Anonymous:                         System.debug('   New Level 6 Label: ' + successor.gCRM_CSL_Label__c);
+Execute Anonymous:                         System.debug('   New Level 5 Label: ' + successor.gCRM_Direct_Parent__r?.gCRM_CSL_Label__c);
+Execute Anonymous:                     }
+Execute Anonymous:                 }
+Execute Anonymous:             }
+Execute Anonymous:         }
+Execute Anonymous:     }
+Execute Anonymous: }
+Execute Anonymous: 
+Execute Anonymous: // Step 4: Query Level 5 Framework records
+Execute Anonymous: System.debug('========== STEP 4: LEVEL 5 FRAMEWORK RECORD ==========');
+Execute Anonymous: List<gCRM_Client_Service_Level_Framework__c> lcsl5List = [
+Execute Anonymous:     SELECT gCRM_Level__c, gCRM_Geography__c, gCRM_Swift_Code__c, gCRM_CSL_Label__c, 
+Execute Anonymous:            gCRM_isActive__c, gCRM_Taxonomy_UID__c, gCRM_Successor_Taxonomy_UI__c,
+Execute Anonymous:            gCRM_LCSL_Unique_Identifier__c,
+Execute Anonymous:            gCRM_Direct_Parent__r.gCRM_Taxonomy_UID__c
+Execute Anonymous:     FROM gCRM_Client_Service_Level_Framework__c 
+Execute Anonymous:     WHERE gCRM_Swift_Code__c = :split.gCRM_SWIFT_Level_5_Code__c
+Execute Anonymous:     AND gCRM_Level__c = 5
+Execute Anonymous: ];
+Execute Anonymous: 
+Execute Anonymous: if(lcsl5List.isEmpty()){
+Execute Anonymous:     System.debug('NO Level 5 Framework record found for SWIFT: ' + split.gCRM_SWIFT_Level_5_Code__c);
+Execute Anonymous: } else {
+Execute Anonymous:     for(gCRM_Client_Service_Level_Framework__c r5 : lcsl5List){
+Execute Anonymous:         System.debug('Geography: ' + r5.gCRM_Geography__c);
+Execute Anonymous:         System.debug('LCSL Unique Identifier: ' + r5.gCRM_LCSL_Unique_Identifier__c);
+Execute Anonymous:         System.debug('Label: ' + r5.gCRM_CSL_Label__c);
+Execute Anonymous:         System.debug('isActive: ' + r5.gCRM_isActive__c);
+Execute Anonymous:         System.debug('Taxonomy UID: ' + r5.gCRM_Taxonomy_UID__c);
+Execute Anonymous:         System.debug('Successor Taxonomy UID: ' + r5.gCRM_Successor_Taxonomy_UI__c);
+Execute Anonymous:         System.debug('Parent Taxonomy UID: ' + r5.gCRM_Direct_Parent__r?.gCRM_Taxonomy_UID__c);
+Execute Anonymous:     }
+Execute Anonymous: }
+17:21:52.53 (53856001)|USER_INFO|[EXTERNAL]|005af000000EwCE|vealapati@deloitte.com.gcrm.6648409.uat|(GMT+00:00) Greenwich Mean Time (GMT)|GMTZ
+17:21:52.53 (54053248)|EXECUTION_STARTED
+17:21:52.53 (54472404)|CODE_UNIT_STARTED|[EXTERNAL]|execute_anonymous_apex
+17:21:52.53 (56429932)|VARIABLE_SCOPE_BEGIN|[108]|lcsl5List|List<gCRM_Client_Service_Level_Framework__c>|true|false
+17:21:52.53 (56510389)|VARIABLE_SCOPE_BEGIN|[27]|lcsl6List|List<gCRM_Client_Service_Level_Framework__c>|true|false
+17:21:52.53 (56628492)|VARIABLE_SCOPE_BEGIN|[2]|split|gCRM_Opportunity_Split__c|true|false
+17:21:52.53 (56673624)|VARIABLE_SCOPE_BEGIN|[19]|splitLCSL5Code|String|false|false
+17:21:52.53 (56688292)|VARIABLE_SCOPE_BEGIN|[20]|splitLCSL6Code|String|false|false
+17:21:52.53 (103044718)|HEAP_ALLOCATE|[95]|Bytes:3
+17:21:52.53 (103327909)|HEAP_ALLOCATE|[100]|Bytes:152
+17:21:52.53 (103473615)|HEAP_ALLOCATE|[417]|Bytes:408
+17:21:52.53 (104369618)|HEAP_ALLOCATE|[430]|Bytes:408
+17:21:52.53 (104709500)|HEAP_ALLOCATE|[317]|Bytes:6
+17:21:52.53 (105067751)|HEAP_ALLOCATE|[EXTERNAL]|Bytes:217
+17:21:52.53 (105650532)|STATEMENT_EXECUTE|[1]
+17:21:52.53 (105685982)|STATEMENT_EXECUTE|[2]
+17:21:52.53 (105714276)|HEAP_ALLOCATE|[2]|Bytes:307
+17:21:52.53 (106422847)|HEAP_ALLOCATE|[2]|Bytes:4
+17:21:52.53 (106625825)|HEAP_ALLOCATE|[68]|Bytes:5
+17:21:52.53 (106754713)|HEAP_ALLOCATE|[74]|Bytes:5
+17:21:52.53 (106809274)|HEAP_ALLOCATE|[82]|Bytes:7
+17:21:52.53 (108704379)|SOQL_EXECUTE_BEGIN|[2]|Aggregations:0|SELECT Id, gCRM_Country__c, gCRM_SWIFT_Level_5_Code__c, gCRM_SWIFT_Level_6_Code__c, gCRM_Local_Client_Service_Level_5__c, gCRM_Local_Client_Service_Level_5_Code__c, gCRM_Local_Client_Service_Level_6__c, gCRM_Local_Client_Service_Level_6_Code__c FROM gCRM_Opportunity_Split__c WHERE Id = 'a02af000007as5tAAA'
+17:21:52.53 (127308330)|SOQL_EXECUTE_END|[2]|Rows:1
+17:21:52.53 (127452413)|HEAP_ALLOCATE|[2]|Bytes:8
+17:21:52.53 (127521198)|HEAP_ALLOCATE|[2]|Bytes:72
+17:21:52.53 (127689399)|HEAP_ALLOCATE|[2]|Bytes:8
+17:21:52.53 (127765873)|HEAP_ALLOCATE|[2]|Bytes:51
+17:21:52.53 (127869315)|HEAP_ALLOCATE|[2]|Bytes:16
+17:21:52.53 (129977779)|VARIABLE_ASSIGNMENT|[2]|split|{"gCRM_Country__c":"GB","CurrencyIsoCode":"EUR","Id":"a02af000007as5tAAA"}|0x39c6c71b
+17:21:52.53 (130049233)|STATEMENT_EXECUTE|[9]
+17:21:52.53 (130092157)|HEAP_ALLOCATE|[9]|Bytes:61
+17:21:52.53 (130560566)|USER_DEBUG|[9]|DEBUG|========== STEP 1: OPPORTUNITY SPLIT CURRENT STATE ==========
+17:21:52.53 (130605604)|STATEMENT_EXECUTE|[10]
+17:21:52.53 (130630349)|HEAP_ALLOCATE|[10]|Bytes:9
+17:21:52.53 (130765590)|HEAP_ALLOCATE|[10]|Bytes:11
+17:21:52.53 (130825625)|USER_DEBUG|[10]|DEBUG|Country: GB
+17:21:52.53 (130847474)|STATEMENT_EXECUTE|[11]
+17:21:52.53 (130867069)|HEAP_ALLOCATE|[11]|Bytes:20
+17:21:52.53 (130895329)|HEAP_ALLOCATE|[11]|Bytes:24
+17:21:52.53 (130933724)|USER_DEBUG|[11]|DEBUG|SWIFT Level 5 Code: null
+17:21:52.53 (130954314)|STATEMENT_EXECUTE|[12]
+17:21:52.53 (130969792)|HEAP_ALLOCATE|[12]|Bytes:20
+17:21:52.53 (130991405)|HEAP_ALLOCATE|[12]|Bytes:24
+17:21:52.53 (131026693)|USER_DEBUG|[12]|DEBUG|SWIFT Level 6 Code: null
+17:21:52.53 (131045676)|STATEMENT_EXECUTE|[13]
+17:21:52.53 (131057934)|HEAP_ALLOCATE|[13]|Bytes:14
+17:21:52.53 (131074731)|HEAP_ALLOCATE|[13]|Bytes:18
+17:21:52.53 (131108927)|USER_DEBUG|[13]|DEBUG|LCSL 5 Label: null
+17:21:52.53 (131127530)|STATEMENT_EXECUTE|[14]
+17:21:52.53 (131136027)|HEAP_ALLOCATE|[14]|Bytes:13
+17:21:52.53 (131153236)|HEAP_ALLOCATE|[14]|Bytes:17
+17:21:52.53 (131187294)|USER_DEBUG|[14]|DEBUG|LCSL 5 Code: null
+17:21:52.53 (131222508)|STATEMENT_EXECUTE|[15]
+17:21:52.53 (131231099)|HEAP_ALLOCATE|[15]|Bytes:14
+17:21:52.53 (131247518)|HEAP_ALLOCATE|[15]|Bytes:18
+17:21:52.53 (131281706)|USER_DEBUG|[15]|DEBUG|LCSL 6 Label: null
+17:21:52.53 (131301263)|STATEMENT_EXECUTE|[16]
+17:21:52.53 (131310290)|HEAP_ALLOCATE|[16]|Bytes:13
+17:21:52.53 (131337482)|HEAP_ALLOCATE|[16]|Bytes:17
+17:21:52.53 (131372115)|USER_DEBUG|[16]|DEBUG|LCSL 6 Code: null
+17:21:52.53 (131391037)|STATEMENT_EXECUTE|[19]
+17:21:52.53 (131493623)|HEAP_ALLOCATE|[19]|Bytes:1
+17:21:52.53 (131515414)|HEAP_ALLOCATE|[19]|Bytes:7
+17:21:52.53 (131586676)|VARIABLE_ASSIGNMENT|[19]|splitLCSL5Code|"GB~null"
+17:21:52.53 (131597605)|STATEMENT_EXECUTE|[20]
+17:21:52.53 (131614359)|HEAP_ALLOCATE|[20]|Bytes:7
+17:21:52.53 (131641749)|VARIABLE_ASSIGNMENT|[20]|splitLCSL6Code|"GB~null"
+17:21:52.53 (131650574)|STATEMENT_EXECUTE|[21]
+17:21:52.53 (131657834)|HEAP_ALLOCATE|[21]|Bytes:41
+17:21:52.53 (131694309)|USER_DEBUG|[21]|DEBUG|========== STEP 2: LOOKUP KEYS ==========
+17:21:52.53 (131714059)|STATEMENT_EXECUTE|[22]
+17:21:52.53 (131722529)|HEAP_ALLOCATE|[22]|Bytes:33
+17:21:52.53 (131737799)|HEAP_ALLOCATE|[22]|Bytes:40
+17:21:52.53 (131772446)|USER_DEBUG|[22]|DEBUG|splitLCSL5Code (Country~SWIFT5): GB~null
+17:21:52.53 (131789644)|STATEMENT_EXECUTE|[23]
+17:21:52.53 (131797657)|HEAP_ALLOCATE|[23]|Bytes:33
+17:21:52.53 (131811442)|HEAP_ALLOCATE|[23]|Bytes:40
+17:21:52.53 (131850064)|USER_DEBUG|[23]|DEBUG|splitLCSL6Code (Country~SWIFT6): GB~null
+17:21:52.53 (131869245)|STATEMENT_EXECUTE|[26]
+17:21:52.53 (131878006)|HEAP_ALLOCATE|[26]|Bytes:54
+17:21:52.53 (131908702)|USER_DEBUG|[26]|DEBUG|========== STEP 3: LEVEL 6 FRAMEWORK RECORD ==========
+17:21:52.53 (131926426)|STATEMENT_EXECUTE|[27]
+17:21:52.53 (131934509)|HEAP_ALLOCATE|[27]|Bytes:478
+17:21:52.53 (131965318)|HEAP_ALLOCATE|[27]|Bytes:4
+17:21:52.53 (132006207)|HEAP_ALLOCATE|[27]|Bytes:7
+17:21:52.53 (133333055)|SOQL_EXECUTE_BEGIN|[27]|Aggregations:0|SELECT gCRM_Level__c, gCRM_Geography__c, gCRM_Swift_Code__c, gCRM_CSL_Label__c, gCRM_isActive__c, gCRM_Taxonomy_UID__c, gCRM_Successor_Taxonomy_UI__c, gCRM_LCSL_Unique_Identifier__c, gCRM_Direct_Parent__r.gCRM_CSL_Label__c, gCRM_Direct_Parent__r.gCRM_Swift_Code__c, gCRM_Direct_Parent__r.gCRM_Taxonomy_UID__c, gCRM_Direct_Parent__r.gCRM_Direct_Parent__r.gCRM_Taxonomy_UID__c FROM gCRM_Client_Service_Level_Framework__c WHERE (gCRM_Swift_Code__c = :tmpVar1 AND gCRM_Level__c = 6)
+17:21:52.53 (177856289)|SOQL_EXECUTE_END|[27]|Rows:0
+17:21:52.53 (178024319)|HEAP_ALLOCATE|[27]|Bytes:4
+17:21:52.53 (178114317)|HEAP_ALLOCATE|[27]|Bytes:0
+17:21:52.53 (178314590)|HEAP_ALLOCATE|[27]|Bytes:4
+17:21:52.53 (178561843)|VARIABLE_ASSIGNMENT|[27]|lcsl6List|[]|0x152f91ed
+17:21:52.53 (178895564)|STATEMENT_EXECUTE|[40]
+17:21:52.53 (178909184)|STATEMENT_EXECUTE|[41]
+17:21:52.53 (178930007)|HEAP_ALLOCATE|[41]|Bytes:45
+17:21:52.53 (178997540)|HEAP_ALLOCATE|[41]|Bytes:49
+17:21:52.53 (179323840)|USER_DEBUG|[41]|DEBUG|NO Level 6 Framework record found for SWIFT: null
+17:21:52.53 (179372419)|STATEMENT_EXECUTE|[42]
+17:21:52.53 (179386405)|HEAP_ALLOCATE|[42]|Bytes:57
+17:21:52.53 (179443953)|USER_DEBUG|[42]|DEBUG|>> Batch would NOT have processed Level 6 for this record
+17:21:52.53 (179470217)|STATEMENT_EXECUTE|[107]
+17:21:52.53 (179480532)|HEAP_ALLOCATE|[107]|Bytes:54
+17:21:52.53 (179526472)|USER_DEBUG|[107]|DEBUG|========== STEP 4: LEVEL 5 FRAMEWORK RECORD ==========
+17:21:52.53 (179552703)|STATEMENT_EXECUTE|[108]
+17:21:52.53 (179563289)|HEAP_ALLOCATE|[108]|Bytes:329
+17:21:52.53 (179598584)|HEAP_ALLOCATE|[108]|Bytes:4
+17:21:52.53 (181080697)|SOQL_EXECUTE_BEGIN|[108]|Aggregations:0|SELECT gCRM_Level__c, gCRM_Geography__c, gCRM_Swift_Code__c, gCRM_CSL_Label__c, gCRM_isActive__c, gCRM_Taxonomy_UID__c, gCRM_Successor_Taxonomy_UI__c, gCRM_LCSL_Unique_Identifier__c, gCRM_Direct_Parent__r.gCRM_Taxonomy_UID__c FROM gCRM_Client_Service_Level_Framework__c WHERE (gCRM_Swift_Code__c = :tmpVar1 AND gCRM_Level__c = 5)
+17:21:52.53 (227525401)|SOQL_EXECUTE_END|[108]|Rows:0
+17:21:52.53 (227668746)|HEAP_ALLOCATE|[108]|Bytes:4
+17:21:52.53 (227724302)|HEAP_ALLOCATE|[108]|Bytes:0
+17:21:52.53 (227833489)|HEAP_ALLOCATE|[108]|Bytes:4
+17:21:52.53 (228003800)|VARIABLE_ASSIGNMENT|[108]|lcsl5List|[]|0x5993a570
+17:21:52.53 (228223144)|STATEMENT_EXECUTE|[118]
+17:21:52.53 (228234021)|STATEMENT_EXECUTE|[119]
+17:21:52.53 (228252755)|HEAP_ALLOCATE|[119]|Bytes:45
+17:21:52.53 (228317764)|HEAP_ALLOCATE|[119]|Bytes:49
+17:21:52.53 (228455972)|USER_DEBUG|[119]|DEBUG|NO Level 5 Framework record found for SWIFT: null
+17:21:52.228 (228682260)|CUMULATIVE_LIMIT_USAGE
+17:21:52.228 (228682260)|LIMIT_USAGE_FOR_NS|(default)|
+  Number of SOQL queries: 3 out of 100
+  Number of query rows: 1 out of 50000
+  Number of SOSL queries: 0 out of 20
+  Number of DML statements: 0 out of 150
+  Number of Publish Immediate DML: 0 out of 150
+  Number of DML rows: 0 out of 10000
+  Maximum CPU time: 0 out of 10000
+  Maximum heap size: 0 out of 6000000
+  Number of callouts: 0 out of 100
+  Number of Email Invocations: 0 out of 10
+  Number of future calls: 0 out of 50
+  Number of queueable jobs added to the queue: 0 out of 50
+  Number of Mobile Apex push calls: 0 out of 10
+
+17:21:52.228 (228682260)|CUMULATIVE_LIMIT_USAGE_END
+
+17:21:52.53 (234895560)|CODE_UNIT_FINISHED|execute_anonymous_apex
+17:21:52.53 (234966571)|EXECUTION_FINISHED

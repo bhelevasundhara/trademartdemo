@@ -14,6 +14,9 @@ import {
 import Navbar from "@/app/components/Navbar";
 import ImageGallery from "./ImageGallery";
 import { salesforceQuery } from "@/app/lib/salesforce";
+import { getProductImage } from "@/app/lib/helpers";
+
+export const dynamic = 'force-dynamic';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -57,44 +60,6 @@ interface SpecRecord {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Mock fallback
-// ---------------------------------------------------------------------------
-const mockProduct: ProductDetail = {
-  Id: "1",
-  Name: "Hydraulic Press Machine 100 Ton",
-  Product_Price__c: 1850000,
-  Units__c: "Unit",
-  MOQ__c: 1,
-  Brand__c: "Apex",
-  Account__r: {
-    Id: "supplier-1",
-    Name: "Apex Machines Pvt. Ltd.",
-    BillingCity: "Rajkot",
-    BillingState: "Gujarat",
-    BillingCountry: "India",
-    Phone: "+91 9876543210",
-    Website: "www.apexmachines.com",
-    Description: "Leading manufacturer of hydraulic machinery",
-    NumberOfEmployees: 250,
-    Rating: "Hot",
-  },
-  Product_SubCategory__r: {
-    Name: "Hydraulic Machines",
-    Product_Custom_Category__r: {
-      Name: "Industrial Machinery",
-    },
-  },
-};
-
-const mockSpecs = [
-  { label: "Capacity", value: "100 Ton" },
-  { label: "Type", value: "Hydraulic" },
-  { label: "Condition", value: "New" },
-  { label: "Automation Grade", value: "Semi-Automatic" },
-  { label: "Power Source", value: "Electric" },
-  { label: "Country of Origin", value: "India" },
-];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -103,36 +68,21 @@ function formatINR(amount: number): string {
   return new Intl.NumberFormat("en-IN").format(amount);
 }
 
-function getProductImage(name: string): string {
-  const lower = (name || "").toLowerCase();
-  if (lower.includes("excavator") || lower.includes("hydraulic"))
-    return "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=600&q=80";
-  if (lower.includes("generator") || lower.includes("diesel"))
-    return "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80";
-  if (lower.includes("cnc") || lower.includes("lathe") || lower.includes("milling"))
-    return "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=600&q=80";
-  if (lower.includes("pump"))
-    return "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=600&q=80";
-  if (lower.includes("compressor"))
-    return "https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=600&q=80";
-  if (lower.includes("solar"))
-    return "https://images.unsplash.com/photo-1509391366360-2e959784a276?w=600&q=80";
-  return "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=600&q=80";
-}
+
 
 // ---------------------------------------------------------------------------
 // Data fetching
 // ---------------------------------------------------------------------------
-async function getProduct(id: string): Promise<ProductDetail> {
+async function getProduct(id: string): Promise<ProductDetail | null> {
   try {
     const safeId = id.replace(/'/g, "\\'");
     const soql = `SELECT Id, Name, Product_Price__c, Units__c, MOQ__c, Brand__c, Description__c, Product_Code__c, Account__r.Id, Account__r.Name, Account__r.BillingCity, Account__r.BillingState, Account__r.BillingCountry, Account__r.Phone, Account__r.Website, Account__r.Description, Account__r.NumberOfEmployees, Account__r.Rating, Product_SubCategory__r.Name, Product_SubCategory__r.Product_Custom_Category__r.Name FROM Product_Custom_Object__c WHERE Id = '${safeId}' LIMIT 1`;
     const records = await salesforceQuery(soql);
     if (records && records.length > 0) return records[0] as ProductDetail;
-    return mockProduct;
+    return null;
   } catch (err) {
-    console.error("[ProductDetailPage] Salesforce fetch failed, using mock:", err);
-    return mockProduct;
+    console.error("[ProductDetailPage] Salesforce fetch failed:", err);
+    return null;
   }
 }
 
@@ -147,10 +97,10 @@ async function getSpecifications(productId: string): Promise<{ label: string; va
         value: r.Value__c || "N/A",
       }));
     }
-    return mockSpecs;
+    return [];
   } catch (err) {
-    console.error("[ProductDetailPage] Specs fetch failed, using mock:", err);
-    return mockSpecs;
+    console.error("[ProductDetailPage] Specs fetch failed:", err);
+    return [];
   }
 }
 
@@ -168,7 +118,24 @@ export default async function ProductDetailPage({
     getSpecifications(id),
   ]);
 
-  const supplier = product.Account__r || mockProduct.Account__r!;
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-[#F9FAFB] flex flex-col font-sans">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Product Not Found</h1>
+            <p className="text-gray-500 mb-6">The product you are looking for does not exist or could not be loaded.</p>
+            <Link href="/products" className="bg-[#1A56DB] text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+              Browse Products
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const supplier = product.Account__r || { Name: "Unknown Supplier", BillingCity: "", BillingState: "", BillingCountry: "", NumberOfEmployees: 0, Rating: "N/A", Id: "#" };
   const categoryName = product.Product_SubCategory__r?.Product_Custom_Category__r?.Name || "Industrial Machinery";
   const location = [supplier.BillingCity, supplier.BillingState, supplier.BillingCountry]
     .filter(Boolean)

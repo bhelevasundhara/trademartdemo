@@ -1,0 +1,232 @@
+67.0 APEX_CODE,FINEST;APEX_PROFILING,INFO;CALLOUT,INFO;DATA_ACCESS,INFO;DB,INFO;NBA,INFO;SYSTEM,DEBUG;VALIDATION,INFO;VISUALFORCE,INFO;WAVE,INFO;WORKFLOW,INFO
+Execute Anonymous: // Using the ORIGINAL SWIFT codes from before the batch ran
+Execute Anonymous: // (from the debug log line 36655)
+Execute Anonymous: String country = 'GB';
+Execute Anonymous: String swiftLevel5 = 'K1020010040001';
+Execute Anonymous: String swiftLevel6 = 'K10200100400010001';
+Execute Anonymous: 
+Execute Anonymous: System.debug('========== LEVEL 6 FRAMEWORK RECORD ==========');
+Execute Anonymous: List<gCRM_Client_Service_Level_Framework__c> lcsl6List = [
+Execute Anonymous:     SELECT gCRM_Level__c, gCRM_Geography__c, gCRM_Swift_Code__c, gCRM_CSL_Label__c, 
+Execute Anonymous:            gCRM_isActive__c, gCRM_Taxonomy_UID__c, gCRM_Successor_Taxonomy_UI__c,
+Execute Anonymous:            gCRM_LCSL_Unique_Identifier__c,
+Execute Anonymous:            gCRM_Direct_Parent__r.gCRM_CSL_Label__c,
+Execute Anonymous:            gCRM_Direct_Parent__r.gCRM_Swift_Code__c,
+Execute Anonymous:            gCRM_Direct_Parent__r.gCRM_Taxonomy_UID__c,
+Execute Anonymous:            gCRM_Direct_Parent__r.gCRM_Direct_Parent__r.gCRM_Taxonomy_UID__c
+Execute Anonymous:     FROM gCRM_Client_Service_Level_Framework__c 
+Execute Anonymous:     WHERE gCRM_Swift_Code__c = :swiftLevel6
+Execute Anonymous:     AND gCRM_Level__c = 6
+Execute Anonymous: ];
+Execute Anonymous: System.debug('Level 6 records found: ' + lcsl6List.size());
+Execute Anonymous: for(gCRM_Client_Service_Level_Framework__c r6 : lcsl6List){
+Execute Anonymous:     System.debug('Geography: ' + r6.gCRM_Geography__c);
+Execute Anonymous:     System.debug('Label: ' + r6.gCRM_CSL_Label__c);
+Execute Anonymous:     System.debug('isActive: ' + r6.gCRM_isActive__c);
+Execute Anonymous:     System.debug('Taxonomy UID: ' + r6.gCRM_Taxonomy_UID__c);
+Execute Anonymous:     System.debug('Successor: ' + r6.gCRM_Successor_Taxonomy_UI__c);
+Execute Anonymous:     System.debug('LCSL Unique Identifier: ' + r6.gCRM_LCSL_Unique_Identifier__c);
+Execute Anonymous:     System.debug('Grandparent UID: ' + r6.gCRM_Direct_Parent__r?.gCRM_Direct_Parent__r?.gCRM_Taxonomy_UID__c);
+Execute Anonymous:     
+Execute Anonymous:     if(!r6.gCRM_isActive__c && r6.gCRM_Successor_Taxonomy_UI__c != null){
+Execute Anonymous:         List<gCRM_Client_Service_Level_Framework__c> successorList = [
+Execute Anonymous:             SELECT gCRM_CSL_Label__c, gCRM_Swift_Code__c, gCRM_Taxonomy_UID__c, gCRM_Geography__c,
+Execute Anonymous:                    gCRM_Direct_Parent__r.gCRM_Direct_Parent__r.gCRM_Taxonomy_UID__c
+Execute Anonymous:             FROM gCRM_Client_Service_Level_Framework__c 
+Execute Anonymous:             WHERE gCRM_Taxonomy_UID__c = :r6.gCRM_Successor_Taxonomy_UI__c
+Execute Anonymous:             AND gCRM_Level__c = 6
+Execute Anonymous:         ];
+Execute Anonymous:         System.debug('Successor records found: ' + successorList.size());
+Execute Anonymous:         for(gCRM_Client_Service_Level_Framework__c s : successorList){
+Execute Anonymous:             System.debug('  Successor Geography: ' + s.gCRM_Geography__c);
+Execute Anonymous:             System.debug('  Successor Label: ' + s.gCRM_CSL_Label__c);
+Execute Anonymous:             System.debug('  Successor Grandparent UID: ' + s.gCRM_Direct_Parent__r?.gCRM_Direct_Parent__r?.gCRM_Taxonomy_UID__c);
+Execute Anonymous:             System.debug('  Inactive Grandparent UID: ' + r6.gCRM_Direct_Parent__r?.gCRM_Direct_Parent__r?.gCRM_Taxonomy_UID__c);
+Execute Anonymous:             Boolean changed = s.gCRM_Direct_Parent__r?.gCRM_Direct_Parent__r?.gCRM_Taxonomy_UID__c != r6.gCRM_Direct_Parent__r?.gCRM_Direct_Parent__r?.gCRM_Taxonomy_UID__c;
+Execute Anonymous:             System.debug('  hasGlobalParentCSLChanged: ' + changed);
+Execute Anonymous:         }
+Execute Anonymous:     }
+Execute Anonymous: }
+Execute Anonymous: 
+Execute Anonymous: System.debug('========== LEVEL 5 FRAMEWORK RECORD ==========');
+Execute Anonymous: List<gCRM_Client_Service_Level_Framework__c> lcsl5List = [
+Execute Anonymous:     SELECT gCRM_Level__c, gCRM_Geography__c, gCRM_Swift_Code__c, gCRM_CSL_Label__c, 
+Execute Anonymous:            gCRM_isActive__c, gCRM_Taxonomy_UID__c, gCRM_Successor_Taxonomy_UI__c,
+Execute Anonymous:            gCRM_LCSL_Unique_Identifier__c,
+Execute Anonymous:            gCRM_Direct_Parent__r.gCRM_Taxonomy_UID__c
+Execute Anonymous:     FROM gCRM_Client_Service_Level_Framework__c 
+Execute Anonymous:     WHERE gCRM_Swift_Code__c = :swiftLevel5
+Execute Anonymous:     AND gCRM_Level__c = 5
+Execute Anonymous: ];
+Execute Anonymous: System.debug('Level 5 records found: ' + lcsl5List.size());
+Execute Anonymous: for(gCRM_Client_Service_Level_Framework__c r5 : lcsl5List){
+Execute Anonymous:     System.debug('Geography: ' + r5.gCRM_Geography__c);
+Execute Anonymous:     System.debug('Label: ' + r5.gCRM_CSL_Label__c);
+Execute Anonymous:     System.debug('isActive: ' + r5.gCRM_isActive__c);
+Execute Anonymous:     System.debug('Taxonomy UID: ' + r5.gCRM_Taxonomy_UID__c);
+Execute Anonymous:     System.debug('Successor: ' + r5.gCRM_Successor_Taxonomy_UI__c);
+Execute Anonymous:     System.debug('LCSL Unique Identifier: ' + r5.gCRM_LCSL_Unique_Identifier__c);
+Execute Anonymous: }
+17:25:15.46 (46220077)|USER_INFO|[EXTERNAL]|005af000000EwCE|vealapati@deloitte.com.gcrm.6648409.uat|(GMT+00:00) Greenwich Mean Time (GMT)|GMTZ
+17:25:15.46 (46355727)|EXECUTION_STARTED
+17:25:15.46 (46828769)|CODE_UNIT_STARTED|[EXTERNAL]|execute_anonymous_apex
+17:25:15.46 (47920767)|VARIABLE_SCOPE_BEGIN|[3]|country|String|false|false
+17:25:15.46 (48124941)|VARIABLE_SCOPE_BEGIN|[51]|lcsl5List|List<gCRM_Client_Service_Level_Framework__c>|true|false
+17:25:15.46 (48142240)|VARIABLE_SCOPE_BEGIN|[8]|lcsl6List|List<gCRM_Client_Service_Level_Framework__c>|true|false
+17:25:15.46 (48154157)|VARIABLE_SCOPE_BEGIN|[4]|swiftLevel5|String|false|false
+17:25:15.46 (48163905)|VARIABLE_SCOPE_BEGIN|[5]|swiftLevel6|String|false|false
+17:25:15.46 (95162415)|HEAP_ALLOCATE|[95]|Bytes:3
+17:25:15.46 (95423895)|HEAP_ALLOCATE|[100]|Bytes:152
+17:25:15.46 (95532591)|HEAP_ALLOCATE|[417]|Bytes:408
+17:25:15.46 (95670430)|HEAP_ALLOCATE|[430]|Bytes:408
+17:25:15.46 (96237815)|HEAP_ALLOCATE|[317]|Bytes:6
+17:25:15.46 (96510270)|HEAP_ALLOCATE|[EXTERNAL]|Bytes:105
+17:25:15.46 (97142033)|STATEMENT_EXECUTE|[1]
+17:25:15.46 (97194804)|STATEMENT_EXECUTE|[3]
+17:25:15.46 (97291054)|HEAP_ALLOCATE|[3]|Bytes:2
+17:25:15.46 (98952839)|VARIABLE_ASSIGNMENT|[3]|country|"GB"
+17:25:15.46 (98999054)|STATEMENT_EXECUTE|[4]
+17:25:15.46 (99054483)|HEAP_ALLOCATE|[4]|Bytes:14
+17:25:15.46 (99123348)|VARIABLE_ASSIGNMENT|[4]|swiftLevel5|"K1020010040001"
+17:25:15.46 (99132496)|STATEMENT_EXECUTE|[5]
+17:25:15.46 (99147489)|HEAP_ALLOCATE|[5]|Bytes:18
+17:25:15.46 (99179788)|VARIABLE_ASSIGNMENT|[5]|swiftLevel6|"K10200100400010001"
+17:25:15.46 (99186951)|STATEMENT_EXECUTE|[7]
+17:25:15.46 (99201038)|HEAP_ALLOCATE|[7]|Bytes:46
+17:25:15.46 (99282798)|HEAP_ALLOCATE|[68]|Bytes:5
+17:25:15.46 (99390344)|HEAP_ALLOCATE|[74]|Bytes:5
+17:25:15.46 (99430116)|HEAP_ALLOCATE|[82]|Bytes:7
+17:25:15.46 (100191305)|USER_DEBUG|[7]|DEBUG|========== LEVEL 6 FRAMEWORK RECORD ==========
+17:25:15.46 (100266821)|STATEMENT_EXECUTE|[8]
+17:25:15.46 (100287046)|HEAP_ALLOCATE|[8]|Bytes:478
+17:25:15.46 (100315893)|HEAP_ALLOCATE|[8]|Bytes:4
+17:25:15.46 (100367921)|HEAP_ALLOCATE|[8]|Bytes:7
+17:25:15.46 (101490046)|SOQL_EXECUTE_BEGIN|[8]|Aggregations:0|SELECT gCRM_Level__c, gCRM_Geography__c, gCRM_Swift_Code__c, gCRM_CSL_Label__c, gCRM_isActive__c, gCRM_Taxonomy_UID__c, gCRM_Successor_Taxonomy_UI__c, gCRM_LCSL_Unique_Identifier__c, gCRM_Direct_Parent__r.gCRM_CSL_Label__c, gCRM_Direct_Parent__r.gCRM_Swift_Code__c, gCRM_Direct_Parent__r.gCRM_Taxonomy_UID__c, gCRM_Direct_Parent__r.gCRM_Direct_Parent__r.gCRM_Taxonomy_UID__c FROM gCRM_Client_Service_Level_Framework__c WHERE (gCRM_Swift_Code__c = :tmpVar1 AND gCRM_Level__c = 6)
+17:25:15.46 (149781692)|SOQL_EXECUTE_END|[8]|Rows:1
+17:25:15.46 (149914790)|HEAP_ALLOCATE|[8]|Bytes:8
+17:25:15.46 (149982612)|HEAP_ALLOCATE|[8]|Bytes:372
+17:25:15.46 (150036260)|HEAP_ALLOCATE|[8]|Bytes:8
+17:25:15.46 (151111928)|VARIABLE_ASSIGNMENT|[8]|lcsl6List|[{"gCRM_CSL_Label__c":"DNU-Prospectus/Comfo (2 more) ...","gCRM_isActive__c":false,"gCRM_Level__c":6,"gCRM_Swift_Code__c":"K10200100400010001","gCRM_Taxonomy_UID__c":"88205876","gCRM_Geography__c":"GB","gCRM_LCSL_Unique_Identifier__c":"GB~K1020010040001000 (1 more) ...","Id":"a8qR10000002riHIAQ","CurrencyIsoCode":"USD","gCRM_Successor_Taxonomy_UI__c":"K10200300400010001"}]|0x4b599746
+17:25:15.46 (151173807)|STATEMENT_EXECUTE|[20]
+17:25:15.46 (151190548)|HEAP_ALLOCATE|[20]|Bytes:23
+17:25:15.46 (151489518)|HEAP_ALLOCATE|[20]|Bytes:1
+17:25:15.46 (151531244)|HEAP_ALLOCATE|[20]|Bytes:24
+17:25:15.46 (151577802)|USER_DEBUG|[20]|DEBUG|Level 6 records found: 1
+17:25:15.46 (151838357)|HEAP_ALLOCATE|[21]|Bytes:5
+17:25:15.46 (151891014)|HEAP_ALLOCATE|[21]|Bytes:44
+17:25:15.46 (151937577)|VARIABLE_SCOPE_BEGIN|[21]|r6|gCRM_Client_Service_Level_Framework__c|true|false
+17:25:15.46 (152148305)|VARIABLE_ASSIGNMENT|[21]|r6|{"gCRM_CSL_Label__c":"DNU-Prospectus/Comfo (2 more) ...","gCRM_isActive__c":false,"gCRM_Level__c":6,"gCRM_Swift_Code__c":"K10200100400010001","gCRM_Taxonomy_UID__c":"88205876","gCRM_Geography__c":"GB","gCRM_LCSL_Unique_Identifier__c":"GB~K1020010040001000 (1 more) ...","Id":"a8qR10000002riHIAQ","CurrencyIsoCode":"USD","gCRM_Successor_Taxonomy_UI__c":"K10200300400010001"}|0x210295d9
+17:25:15.46 (152166553)|STATEMENT_EXECUTE|[21]
+17:25:15.46 (152171519)|STATEMENT_EXECUTE|[22]
+17:25:15.46 (152179081)|HEAP_ALLOCATE|[22]|Bytes:11
+17:25:15.46 (152223700)|HEAP_ALLOCATE|[22]|Bytes:13
+17:25:15.46 (152291093)|USER_DEBUG|[22]|DEBUG|Geography: GB
+17:25:15.46 (152307144)|STATEMENT_EXECUTE|[23]
+17:25:15.46 (152313643)|HEAP_ALLOCATE|[23]|Bytes:7
+17:25:15.46 (152332146)|HEAP_ALLOCATE|[23]|Bytes:29
+17:25:15.46 (152362388)|USER_DEBUG|[23]|DEBUG|Label: DNU-Prospectus/Comfort
+17:25:15.46 (152378945)|STATEMENT_EXECUTE|[24]
+17:25:15.46 (152389068)|HEAP_ALLOCATE|[24]|Bytes:10
+17:25:15.46 (152502495)|HEAP_ALLOCATE|[24]|Bytes:5
+17:25:15.46 (152642987)|HEAP_ALLOCATE|[24]|Bytes:15
+17:25:15.46 (152663585)|USER_DEBUG|[24]|DEBUG|isActive: false
+17:25:15.46 (152677849)|STATEMENT_EXECUTE|[25]
+17:25:15.46 (152683222)|HEAP_ALLOCATE|[25]|Bytes:14
+17:25:15.46 (152705315)|HEAP_ALLOCATE|[25]|Bytes:22
+17:25:15.46 (152736128)|USER_DEBUG|[25]|DEBUG|Taxonomy UID: 88205876
+17:25:15.46 (152751455)|STATEMENT_EXECUTE|[26]
+17:25:15.46 (152757280)|HEAP_ALLOCATE|[26]|Bytes:11
+17:25:15.46 (152773895)|HEAP_ALLOCATE|[26]|Bytes:29
+17:25:15.46 (152801872)|USER_DEBUG|[26]|DEBUG|Successor: K10200300400010001
+17:25:15.46 (152815221)|STATEMENT_EXECUTE|[27]
+17:25:15.46 (152820523)|HEAP_ALLOCATE|[27]|Bytes:24
+17:25:15.46 (152836309)|HEAP_ALLOCATE|[27]|Bytes:45
+17:25:15.46 (152863128)|USER_DEBUG|[27]|DEBUG|LCSL Unique Identifier: GB~K10200100400010001
+17:25:15.46 (152876702)|STATEMENT_EXECUTE|[28]
+17:25:15.46 (152882140)|HEAP_ALLOCATE|[28]|Bytes:17
+17:25:15.46 (152984933)|HEAP_ALLOCATE|[28]|Bytes:21
+17:25:15.46 (153020997)|USER_DEBUG|[28]|DEBUG|Grandparent UID: null
+17:25:15.46 (153047162)|STATEMENT_EXECUTE|[30]
+17:25:15.46 (153051252)|STATEMENT_EXECUTE|[31]
+17:25:15.46 (153056702)|HEAP_ALLOCATE|[31]|Bytes:257
+17:25:15.46 (153074362)|HEAP_ALLOCATE|[31]|Bytes:4
+17:25:15.46 (153832735)|SOQL_EXECUTE_BEGIN|[31]|Aggregations:0|SELECT gCRM_CSL_Label__c, gCRM_Swift_Code__c, gCRM_Taxonomy_UID__c, gCRM_Geography__c, gCRM_Direct_Parent__r.gCRM_Direct_Parent__r.gCRM_Taxonomy_UID__c FROM gCRM_Client_Service_Level_Framework__c WHERE (gCRM_Taxonomy_UID__c = :tmpVar1 AND gCRM_Level__c = 6)
+17:25:15.46 (198634963)|SOQL_EXECUTE_END|[31]|Rows:0
+17:25:15.46 (198744099)|HEAP_ALLOCATE|[31]|Bytes:4
+17:25:15.46 (198793923)|HEAP_ALLOCATE|[31]|Bytes:0
+17:25:15.46 (198863168)|HEAP_ALLOCATE|[31]|Bytes:4
+17:25:15.46 (198932515)|VARIABLE_SCOPE_BEGIN|[31]|successorList|List<gCRM_Client_Service_Level_Framework__c>|true|false
+17:25:15.46 (199010238)|VARIABLE_ASSIGNMENT|[31]|successorList|[]|0x1f62e4e3
+17:25:15.46 (199021892)|STATEMENT_EXECUTE|[38]
+17:25:15.46 (199030892)|HEAP_ALLOCATE|[38]|Bytes:25
+17:25:15.46 (199172720)|HEAP_ALLOCATE|[38]|Bytes:1
+17:25:15.46 (199196950)|HEAP_ALLOCATE|[38]|Bytes:26
+17:25:15.46 (199231260)|USER_DEBUG|[38]|DEBUG|Successor records found: 0
+17:25:15.46 (199302429)|HEAP_ALLOCATE|[39]|Bytes:5
+17:25:15.46 (199342539)|VARIABLE_ASSIGNMENT|[39]|s|null|
+17:25:15.46 (199352684)|STATEMENT_EXECUTE|[39]
+17:25:15.46 (199370497)|HEAP_ALLOCATE|[21]|Bytes:5
+17:25:15.46 (199396041)|VARIABLE_ASSIGNMENT|[21]|r6|null|
+17:25:15.46 (199404942)|STATEMENT_EXECUTE|[50]
+17:25:15.46 (199411439)|HEAP_ALLOCATE|[50]|Bytes:46
+17:25:15.46 (199460377)|USER_DEBUG|[50]|DEBUG|========== LEVEL 5 FRAMEWORK RECORD ==========
+17:25:15.46 (199475470)|STATEMENT_EXECUTE|[51]
+17:25:15.46 (199481774)|HEAP_ALLOCATE|[51]|Bytes:329
+17:25:15.46 (199498735)|HEAP_ALLOCATE|[51]|Bytes:4
+17:25:15.46 (200300355)|SOQL_EXECUTE_BEGIN|[51]|Aggregations:0|SELECT gCRM_Level__c, gCRM_Geography__c, gCRM_Swift_Code__c, gCRM_CSL_Label__c, gCRM_isActive__c, gCRM_Taxonomy_UID__c, gCRM_Successor_Taxonomy_UI__c, gCRM_LCSL_Unique_Identifier__c, gCRM_Direct_Parent__r.gCRM_Taxonomy_UID__c FROM gCRM_Client_Service_Level_Framework__c WHERE (gCRM_Swift_Code__c = :tmpVar1 AND gCRM_Level__c = 5)
+17:25:15.46 (242551070)|SOQL_EXECUTE_END|[51]|Rows:1
+17:25:15.46 (242652412)|HEAP_ALLOCATE|[51]|Bytes:8
+17:25:15.46 (242681934)|HEAP_ALLOCATE|[51]|Bytes:313
+17:25:15.46 (242720466)|HEAP_ALLOCATE|[51]|Bytes:8
+17:25:15.46 (243019803)|VARIABLE_ASSIGNMENT|[51]|lcsl5List|[{"gCRM_CSL_Label__c":"DNU-Prospectus/Comfo (2 more) ...","gCRM_isActive__c":false,"gCRM_Level__c":5,"gCRM_Swift_Code__c":"K1020010040001","gCRM_Taxonomy_UID__c":"88205256","gCRM_Geography__c":"GB","gCRM_LCSL_Unique_Identifier__c":"GB~K1020010040001","Id":"a8qR10000002riGIAQ","CurrencyIsoCode":"USD"}]|0x5454bf89
+17:25:15.46 (243038609)|STATEMENT_EXECUTE|[60]
+17:25:15.46 (243048444)|HEAP_ALLOCATE|[60]|Bytes:23
+17:25:15.46 (243198557)|HEAP_ALLOCATE|[60]|Bytes:1
+17:25:15.46 (243225007)|HEAP_ALLOCATE|[60]|Bytes:24
+17:25:15.46 (243281443)|USER_DEBUG|[60]|DEBUG|Level 5 records found: 1
+17:25:15.46 (243379626)|HEAP_ALLOCATE|[61]|Bytes:5
+17:25:15.46 (243408145)|HEAP_ALLOCATE|[61]|Bytes:40
+17:25:15.46 (243443470)|VARIABLE_SCOPE_BEGIN|[61]|r5|gCRM_Client_Service_Level_Framework__c|true|false
+17:25:15.46 (243612585)|VARIABLE_ASSIGNMENT|[61]|r5|{"gCRM_CSL_Label__c":"DNU-Prospectus/Comfo (2 more) ...","gCRM_isActive__c":false,"gCRM_Level__c":5,"gCRM_Swift_Code__c":"K1020010040001","gCRM_Taxonomy_UID__c":"88205256","gCRM_Geography__c":"GB","gCRM_LCSL_Unique_Identifier__c":"GB~K1020010040001","Id":"a8qR10000002riGIAQ","CurrencyIsoCode":"USD"}|0x6b5ef5a8
+17:25:15.46 (243627489)|STATEMENT_EXECUTE|[61]
+17:25:15.46 (243631750)|STATEMENT_EXECUTE|[62]
+17:25:15.46 (243651851)|HEAP_ALLOCATE|[62]|Bytes:13
+17:25:15.46 (243705008)|USER_DEBUG|[62]|DEBUG|Geography: GB
+17:25:15.46 (243720583)|STATEMENT_EXECUTE|[63]
+17:25:15.46 (243731402)|HEAP_ALLOCATE|[63]|Bytes:29
+17:25:15.46 (243766681)|USER_DEBUG|[63]|DEBUG|Label: DNU-Prospectus/Comfort
+17:25:15.46 (243799297)|STATEMENT_EXECUTE|[64]
+17:25:15.46 (243867582)|HEAP_ALLOCATE|[64]|Bytes:5
+17:25:15.46 (243890477)|HEAP_ALLOCATE|[64]|Bytes:15
+17:25:15.46 (243910974)|USER_DEBUG|[64]|DEBUG|isActive: false
+17:25:15.46 (243925548)|STATEMENT_EXECUTE|[65]
+17:25:15.46 (243935274)|HEAP_ALLOCATE|[65]|Bytes:22
+17:25:15.46 (243989899)|USER_DEBUG|[65]|DEBUG|Taxonomy UID: 88205256
+17:25:15.46 (244004336)|STATEMENT_EXECUTE|[66]
+17:25:15.46 (244016754)|HEAP_ALLOCATE|[66]|Bytes:15
+17:25:15.46 (244045563)|USER_DEBUG|[66]|DEBUG|Successor: null
+17:25:15.46 (244060238)|STATEMENT_EXECUTE|[67]
+17:25:15.46 (244075965)|HEAP_ALLOCATE|[67]|Bytes:41
+17:25:15.46 (244106322)|USER_DEBUG|[67]|DEBUG|LCSL Unique Identifier: GB~K1020010040001
+17:25:15.46 (244365039)|HEAP_ALLOCATE|[61]|Bytes:5
+17:25:15.46 (244406105)|VARIABLE_ASSIGNMENT|[61]|r5|null|
+17:25:15.244 (244603825)|CUMULATIVE_LIMIT_USAGE
+17:25:15.244 (244603825)|LIMIT_USAGE_FOR_NS|(default)|
+  Number of SOQL queries: 3 out of 100
+  Number of query rows: 2 out of 50000
+  Number of SOSL queries: 0 out of 20
+  Number of DML statements: 0 out of 150
+  Number of Publish Immediate DML: 0 out of 150
+  Number of DML rows: 0 out of 10000
+  Maximum CPU time: 0 out of 10000
+  Maximum heap size: 0 out of 6000000
+  Number of callouts: 0 out of 100
+  Number of Email Invocations: 0 out of 10
+  Number of future calls: 0 out of 50
+  Number of queueable jobs added to the queue: 0 out of 50
+  Number of Mobile Apex push calls: 0 out of 10
+
+17:25:15.244 (244603825)|CUMULATIVE_LIMIT_USAGE_END
+
+17:25:15.46 (250301646)|CODE_UNIT_FINISHED|execute_anonymous_apex
+17:25:15.46 (250375484)|EXECUTION_FINISHED

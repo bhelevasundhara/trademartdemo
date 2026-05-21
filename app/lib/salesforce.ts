@@ -121,3 +121,15 @@ export async function salesforceQuery(soql: string): Promise<any[]> {
     throw new Error(`Salesforce query error: ${err.message}`);
   }
 }
+
+export async function salesforceCount(soql: string): Promise<number> {
+  const token = await getAccessToken();
+  const url = `${process.env.SF_INSTANCE_URL}/services/data/${process.env.SF_API_VERSION || 'v59.0'}/query?q=${encodeURIComponent(soql)}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+  if (!res.ok) return 0;
+  const data = await res.json();
+  return data.totalSize ?? 0;
+}
